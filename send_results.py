@@ -120,38 +120,47 @@ def parse_junit_xml(xml_file="results.xml"):
 # ============================================================
 # ENVOYER LES RÉSULTATS
 # ============================================================
+# ============================================================
+# ENVOYER LES RÉSULTATS (VERSION DYNAMIQUE)
+# ============================================================
 def send_to_odoo(uid, models, results):
-    build_number = os.environ.get("BUILD_NUMBER", "local")
-    job_name     = os.environ.get("JOB_NAME", "calcul")
+    # 1. Récupérer l'ID du Test Run envoyé par Odoo à Jenkins
+    # Jenkins reçoit ODOO_ID en paramètre, il devient une variable d'env pour le script
+    run_id_str = os.environ.get("ODOO_ID")
+    
+    if not run_id_str:
+        print(" Erreur : ODOO_ID est introuvable. Le script ne sait pas quel Run mettre à jour.")
+        return
 
+    run_id = int(run_id_str)
+    build_number = os.environ.get("BUILD_NUMBER", "local")
+    
+    # Calcul du résultat global
     global_result = "fail" if any(r["status"] == "fail" for r in results) else "pass"
 
-    # 1. Projet
-    project_id = get_or_create_project(uid, models, job_name)
+    print(f" Mise à jour du Test Run ID: {run_id} (Build #{build_number})")
 
-    # 2. Test Case
-    test_case_id = get_or_create_test_case(uid, models, project_id, job_name)
-
-    # 3. Créer le Test Run
-    run_id = models.execute_kw(
+    # 2. Mettre à jour le Test Run existant au lieu d'en créer un nouveau
+    models.execute_kw(
         ODOO_DB, uid, ODOO_PASSWORD,
-        'test.run', 'create',
-        [{
-            'name':         f"Build #{build_number}",
-            'test_case_id': test_case_id,
-            'description':  f"Jenkins Build #{build_number}",
-            'state':        'draft',
-            'result':       global_result,
+        'test.run', 'write',
+        [[run_id], {
+            'description': f"Mis à jour par Jenkins Build #{build_number}",
+            'result': global_result,
         }]
     )
 
-    # 4. Action Start (si la méthode existe dans votre module Odoo)
-    try:
-        models.execute_kw(ODOO_DB, uid, ODOO_PASSWORD, 'test.run', 'action_start', [[run_id]])
-    except:
-        pass 
+    # 3. Supprimer les étapes existantes si nécessaire (optionnel) 
+    # pour éviter les doublons si on relance le même build
+    existing_steps = models.execute_kw(
+        ODOO_DB, uid, ODOO_PASSWORD,
+        'test.run.step', 'search',
+        [[['test_run_id', '=', run_id]]]
+    )
+    if existing_steps:
+        models.execute_kw(ODOO_DB, uid, ODOO_PASSWORD, 'test.run.step', 'unlink', [existing_steps])
 
-    # 5. Créer les étapes
+    # 4. Créer les étapes de résultat
     for r in results:
         models.execute_kw(
             ODOO_DB, uid, ODOO_PASSWORD,
@@ -165,13 +174,14 @@ def send_to_odoo(uid, models, results):
             }]
         )
 
-    # 6. Action Done
+    # 5. Appeler l'action_done de ton modèle TestRun pour fermer le test
     try:
         models.execute_kw(ODOO_DB, uid, ODOO_PASSWORD, 'test.run', 'action_done', [[run_id]])
-    except:
-        pass
+        print(f" Test Run {run_id} passé à l'état Terminé.")
+    except Exception as e:
+        print(f" Erreur lors de l'appel à action_done : {e}")
 
-    print(f" Résultat envoyé Build #{build_number} : {global_result.upper()}")
+    print(f" Résultat synchronisé : {global_result.upper()}")
 
 # ============================================================
 # MAIN
