@@ -117,17 +117,13 @@ def parse_junit_xml(xml_file="results.xml"):
         if failure_element is not None:
             result["status"] = "fail"
             # On récupère le texte de l'erreur
-            full_error = failure_element.text or "Erreur inconnue"
+            full_error = failure_element.attrib.get("message") or failure_element.text or "Erreur inconnue"
             
             # --- OPTIMISATION POUR LE BUG ODOO ---
             # On ne prend que la dernière ligne du message d'erreur (ex: AssertionError: 2 != 1)
             # car c'est la plus importante pour le champ 'actual_result' d'Odoo
             lines = [l.strip() for l in full_error.split('\n') if l.strip()]
-            if lines:
-                result["message"] = lines[-1] 
-            else:
-                result["message"] = full_error
-
+            result["message"] = lines[-1] if lines else full_error
         results.append(result)
         
     return results
@@ -152,6 +148,8 @@ def send_to_odoo(uid, models, results):
     
     # Calcul du résultat global
     global_result = "fail" if any(r["status"] == "fail" for r in results) else "pass"
+    
+    print(f"DEBUG: Statuts trouvés : {[r['status'] for r in results]}")
 
     print(f" Mise à jour du Test Run ID: {run_id} (Build #{build_number})")
 
