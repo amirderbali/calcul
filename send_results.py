@@ -15,7 +15,7 @@ ODOO_PASSWORD  = os.environ.get("ODOO_PW", "admin")
 # CONNEXION ODOO
 # ============================================================
 def connect_odoo():
-    print(f"🔄 Tentative de connexion à {ODOO_URL}...")
+    print(f" Tentative de connexion à {ODOO_URL}...")
     try:
         common = xmlrpc.client.ServerProxy(f"{ODOO_URL}/xmlrpc/2/common")
         
@@ -23,15 +23,15 @@ def connect_odoo():
         uid = common.authenticate(ODOO_DB, ODOO_USER, ODOO_PASSWORD, {})
         
         if not uid:
-            print(f"❌ Erreur : Identifiants incorrects (DB: {ODOO_DB}, User: {ODOO_USER})")
+            print(f" Erreur : Identifiants incorrects (DB: {ODOO_DB}, User: {ODOO_USER})")
             raise Exception("Authentification Odoo échouée !")
             
-        print(f"✅ Connecté à Odoo (uid={uid})")
+        print(f" Connecté à Odoo (uid={uid})")
         models = xmlrpc.client.ServerProxy(f"{ODOO_URL}/xmlrpc/2/object")
         return uid, models
         
     except Exception as e:
-        print(f"💥 Erreur lors de la connexion : {str(e)}")
+        print(f" Erreur lors de la connexion : {str(e)}")
         raise
 
 # ============================================================
@@ -44,7 +44,7 @@ def get_or_create_project(uid, models, project_name):
         [[['name', '=', project_name]]]
     )
     if existing:
-        print(f"✅ Projet existant : '{project_name}' (id={existing[0]})")
+        print(f" Projet existant : '{project_name}' (id={existing[0]})")
         return existing[0]
 
     project_id = models.execute_kw(
@@ -52,7 +52,7 @@ def get_or_create_project(uid, models, project_name):
         'project.project', 'create',
         [{'name': project_name}]
     )
-    print(f"✅ Projet créé : '{project_name}' (id={project_id})")
+    print(f" Projet créé : '{project_name}' (id={project_id})")
     return project_id
 
 # ============================================================
@@ -182,5 +182,5 @@ if __name__ == "__main__":
         results     = parse_junit_xml("results.xml")
         send_to_odoo(uid, models, results)
     except Exception as e:
-        print(f"❌ Erreur critique : {e}")
+        print(f" Erreur critique : {e}")
         exit(1)
