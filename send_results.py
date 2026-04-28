@@ -171,7 +171,7 @@ def send_to_odoo(uid, models, results):
     except:
         pass
 
-    print(f"\n📊 Résultat envoyé Build #{build_number} : {global_result.upper()}")
+    print(f" Résultat envoyé Build #{build_number} : {global_result.upper()}")
 
 # ============================================================
 # MAIN
