@@ -92,25 +92,31 @@ def get_or_create_test_case(uid, models, project_id, project_name):
 # PARSER LE XML (PYTEST)
 # ============================================================
 def parse_junit_xml(xml_file="results.xml"):
-    # ... début du code inchangé ...
+    if not os.path.exists(xml_file):
+        raise FileNotFoundError(f"Le fichier {xml_file} est introuvable !")
+        
+    # --- CES LIGNES SONT INDISPENSABLES ---
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+    results = []
+    # --------------------------------------
+
     for testcase in root.iter('testcase'):
         name = testcase.attrib.get("name", "unknown")
         result = {
             "name": name,
-            "status": "pass", # Par défaut
+            "status": "pass", 
             "message": ""
         }
 
-        # On cherche TOUS les types d'erreurs possibles dans le XML
         failure = testcase.find('failure')
         error = testcase.find('error')
         
         if failure is not None or error is not None:
             element = failure if failure is not None else error
-            result["status"] = "fail" # ON FORCE LE MOT "fail" POUR ODOO
-            # On prend le message d'erreur
+            result["status"] = "fail" 
             msg = element.attrib.get('message') or element.text or "Assertion Error"
-            result["message"] = msg.split('\n')[0] # Juste la première ligne
+            result["message"] = msg.split('\n')[0] 
 
         results.append(result)
     return results
