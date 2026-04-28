@@ -1,20 +1,37 @@
 pipeline {
     agent any
+
     stages {
-        stage('Installation') {
+        stage('Checkout') {
             steps {
-                bat 'pip install -r requirements.txt'
+                // Utilisation des identifiants GitHub pour éviter les erreurs de permission
+                git branch: 'main', 
+                    credentialsId: 'github-credentials', 
+                    url: 'https://github.com/amirderbali/calcul.git'
             }
         }
-        stage('Test Python') {
+
+        stage('Install Dependencies') {
             steps {
-                // Lance les tests. Cela va échouer exprès à cause de ton bug (5-3=1)
-                bat 'python -m unittest test.py'
+                // Utilisation de python -m pip pour plus de stabilité sur Windows
+                bat 'python -m pip install -r requirements.txt'
             }
         }
-        stage('Sync Odoo') {
+
+        stage('Run Tests') {
             steps {
-                // Envoie les résultats vers ton module Odoo
+                // ON LANCE calculatrice.py car c'est lui qui contient les "def test_..."
+                bat 'pytest calculatrice.py --junitxml=results.xml -v'
+            }
+            post {
+                always {
+                    junit 'results.xml'
+                }
+            }
+        }
+
+        stage('Send Results to Test Management') {
+            steps {
                 bat 'python send_results.py'
             }
         }
