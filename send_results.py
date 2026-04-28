@@ -5,7 +5,7 @@ import os
 # ============================================================
 # === CONFIGURATION ODOO ===
 # ============================================================
-ODOO_URL      = "http://localhost:8069"
+ODOO_URL      = "http://192.168.1.3:8069"
 ODOO_DB       = "test_management"
 ODOO_USER      = "admin"
 # On essaie de lire une variable d'env, sinon on utilise "admin" en dur
