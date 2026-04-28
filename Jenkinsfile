@@ -1,5 +1,14 @@
 pipeline {
     agent any
+    parameters {
+        // C'est ici qu'on définit le paramètre reçu d'Odoo
+        string(name: 'TESTE', defaultValue: '', description: 'ID du Test Run envoyé par Odoo')
+    }
+
+    environment {
+        // On expose l'ID d'Odoo comme variable d'environnement pour les scripts Python
+        ODOO_TEST_ID = "${params.TESTE}"
+    }
 
     stages {
         stage('Checkout') {
