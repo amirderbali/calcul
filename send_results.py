@@ -92,40 +92,27 @@ def get_or_create_test_case(uid, models, project_id, project_name):
 # PARSER LE XML (PYTEST)
 # ============================================================
 def parse_junit_xml(xml_file="results.xml"):
-    if not os.path.exists(xml_file):
-        raise FileNotFoundError(f"Le fichier {xml_file} est introuvable !")
-        
-    tree = ET.parse(xml_file)
-    root = tree.getroot()
-    results = []
-
+    # ... début du code inchangé ...
     for testcase in root.iter('testcase'):
-        # On nettoie le nom du test pour Odoo
         name = testcase.attrib.get("name", "unknown")
-        
         result = {
-            "name":      name,
-            "classname": testcase.attrib.get("classname", ""),
-            "duration":  float(testcase.attrib.get("time", 0)),
-            "status":    "pass",
-            "message":   ""
+            "name": name,
+            "status": "pass", # Par défaut
+            "message": ""
         }
 
-        # On cherche l'échec (failure) ou l'erreur
-        failure_element = testcase.find('failure') or testcase.find('error')
+        # On cherche TOUS les types d'erreurs possibles dans le XML
+        failure = testcase.find('failure')
+        error = testcase.find('error')
         
-        if failure_element is not None:
-            result["status"] = "fail"
-            # On récupère le texte de l'erreur
-            full_error = failure_element.attrib.get("message") or failure_element.text or "Erreur inconnue"
-            
-            # --- OPTIMISATION POUR LE BUG ODOO ---
-            # On ne prend que la dernière ligne du message d'erreur (ex: AssertionError: 2 != 1)
-            # car c'est la plus importante pour le champ 'actual_result' d'Odoo
-            lines = [l.strip() for l in full_error.split('\n') if l.strip()]
-            result["message"] = lines[-1] if lines else full_error
+        if failure is not None or error is not None:
+            element = failure if failure is not None else error
+            result["status"] = "fail" # ON FORCE LE MOT "fail" POUR ODOO
+            # On prend le message d'erreur
+            msg = element.attrib.get('message') or element.text or "Assertion Error"
+            result["message"] = msg.split('\n')[0] # Juste la première ligne
+
         results.append(result)
-        
     return results
 
 # ============================================================
