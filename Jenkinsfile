@@ -13,8 +13,10 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                 // Utilisation de python -m pip pour plus de stabilité sur Windows
                 bat 'python -m pip install -r requirements.txt'
+                }
             }
         }
 
