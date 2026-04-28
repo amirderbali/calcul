@@ -100,21 +100,36 @@ def parse_junit_xml(xml_file="results.xml"):
     results = []
 
     for testcase in root.iter('testcase'):
+        # On nettoie le nom du test pour Odoo
+        name = testcase.attrib.get("name", "unknown")
+        
         result = {
-            "name":      testcase.attrib.get("name", "unknown"),
+            "name":      name,
             "classname": testcase.attrib.get("classname", ""),
             "duration":  float(testcase.attrib.get("time", 0)),
             "status":    "pass",
             "message":   ""
         }
-        if testcase.find('failure') is not None:
-            result["status"]  = "fail"
-            result["message"] = testcase.find('failure').text or ""
-        elif testcase.find('error') is not None:
-            result["status"]  = "fail"
-            result["message"] = testcase.find('error').text or ""
+
+        # On cherche l'échec (failure) ou l'erreur
+        failure_element = testcase.find('failure') or testcase.find('error')
+        
+        if failure_element is not None:
+            result["status"] = "fail"
+            # On récupère le texte de l'erreur
+            full_error = failure_element.text or "Erreur inconnue"
+            
+            # --- OPTIMISATION POUR LE BUG ODOO ---
+            # On ne prend que la dernière ligne du message d'erreur (ex: AssertionError: 2 != 1)
+            # car c'est la plus importante pour le champ 'actual_result' d'Odoo
+            lines = [l.strip() for l in full_error.split('\n') if l.strip()]
+            if lines:
+                result["message"] = lines[-1] 
+            else:
+                result["message"] = full_error
 
         results.append(result)
+        
     return results
 
 # ============================================================
