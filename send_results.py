@@ -7,7 +7,7 @@ import os
 # ============================================================
 ODOO_URL      = "http://localhost:8069"
 ODOO_DB       = "test_management"
-ODOO_USER      = "admin"
+ODOO_USER      = "4ea45d7c446afe57b2e91a870b91debaa845bd6c"
 # On essaie de lire une variable d'env, sinon on utilise "admin" en dur
 ODOO_PASSWORD  = os.environ.get("ODOO_PW", "admin") 
 
