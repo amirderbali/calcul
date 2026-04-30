@@ -9,7 +9,7 @@ ODOO_URL      = "http://localhost:8069"
 ODOO_DB       = "test_management"
 ODOO_USER      = "admin@odoo.com"
 # On essaie de lire une variable d'env, sinon on utilise "admin" en dur
-ODOO_PASSWORD  = "eb0b6acea110d3001d1f09ae07b570aa50fe7a51" 
+ODOO_PASSWORD  = "aa51e3538f835e63b63141961ac557ab860be4d0" 
 
 # ============================================================
 # CONNEXION ODOO
