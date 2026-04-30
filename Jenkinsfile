@@ -30,7 +30,7 @@ pipeline {
                 }
             }
             echo "Envoi des résultats vers Odoo..."
-            bat 'python send_results.py'
+            bat "python send_results.py --run_id=%ODOO_TEST_RUN_ID%"
         }
     }
 }
