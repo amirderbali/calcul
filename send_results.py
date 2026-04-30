@@ -1,16 +1,16 @@
 import xmlrpc.client
 import xml.etree.ElementTree as ET
 import os
+import sys
 
 # ============================================================
 # === CONFIGURATION ODOO ===
 # ============================================================
 ODOO_URL      = "http://localhost:8069"  
 ODOO_DB       = "test_management"
-ODOO_USER      = "admin@odoo.com"
-# On essaie de lire une variable d'env, sinon on utilise "admin" en dur
-ODOO_PASSWORD  = "aa51e3538f835e63b63141961ac557ab860be4d0" 
-
+ODOO_USER     = "admin@odoo.com"
+# Utilise ton mot de passe en clair ou ta clé API mise à jour
+ODOO_PASSWORD  = "aa51e3538f835e63b63141961ac557ab860be4d0"
 # ============================================================
 # CONNEXION ODOO
 # ============================================================
@@ -19,7 +19,6 @@ def connect_odoo():
     try:
         common = xmlrpc.client.ServerProxy(f"{ODOO_URL}/xmlrpc/2/common")
         
-        # UTILISATION DES VARIABLES DE CONFIGURATION CI-DESSUS
         uid = common.authenticate(ODOO_DB, ODOO_USER, ODOO_PASSWORD, {})
         
         if not uid:
@@ -35,71 +34,15 @@ def connect_odoo():
         raise
         
 # ============================================================
-# CHERCHER OU CRÉER LE PROJET ODOO
-# ============================================================
-def get_or_create_project(uid, models, project_name):
-    existing = models.execute_kw(
-        ODOO_DB, uid, ODOO_PASSWORD,
-        'project.project', 'search',
-        [[['name', '=', project_name]]]
-    )
-    if existing:
-        print(f" Projet existant : '{project_name}' (id={existing[0]})")
-        return existing[0]
-
-    project_id = models.execute_kw(
-        ODOO_DB, uid, ODOO_PASSWORD,
-        'project.project', 'create',
-        [{'name': project_name}]
-    )
-    print(f" Projet créé : '{project_name}' (id={project_id})")
-    return project_id
-
-# ============================================================
-# CHERCHER OU CRÉER LE TEST CASE
-# ============================================================
-def get_or_create_test_case(uid, models, project_id, project_name):
-    case_name = f"Jenkins - {project_name}"
-
-    existing = models.execute_kw(
-        ODOO_DB, uid, ODOO_PASSWORD,
-        'test.case', 'search',
-        [[['name', '=', case_name], ['project_id', '=', project_id]]]
-    )
-    
-    if existing:
-        case_id = existing[0]
-        models.execute_kw(
-            ODOO_DB, uid, ODOO_PASSWORD,
-            'test.case', 'write',
-            [[case_id], {'state': 'approved'}]
-        )
-        return case_id
-
-    test_case_id = models.execute_kw(
-        ODOO_DB, uid, ODOO_PASSWORD,
-        'test.case', 'create',
-        [{
-            'name':       case_name,
-            'project_id': project_id,
-            'state':      'approved',
-            'description': f"Créé par Jenkins pour {project_name}",
-        }]
-    )
-    return test_case_id
-
-# ============================================================
 # PARSER LE XML (PYTEST)
 # ============================================================
 def parse_junit_xml(xml_file="results.xml"):
     if not os.path.exists(xml_file):
         raise FileNotFoundError(f"Le fichier {xml_file} est introuvable !")
         
-    # --- CES LIGNES SONT INDISPENSABLES ---
     tree = ET.parse(xml_file)
     root = tree.getroot()
     results = []
-    # --------------------------------------
 
     for testcase in root.iter('testcase'):
         name = testcase.attrib.get("name", "unknown")
@@ -122,31 +65,30 @@ def parse_junit_xml(xml_file="results.xml"):
     return results
 
 # ============================================================
-# ENVOYER LES RÉSULTATS
-# ============================================================
-# ============================================================
 # ENVOYER LES RÉSULTATS (VERSION DYNAMIQUE)
 # ============================================================
 def send_to_odoo(uid, models, results):
-    # 1. Récupérer l'ID du Test Run envoyé par Odoo à Jenkins
-    # Jenkins reçoit ODOO_ID en paramètre, il devient une variable d'env pour le script
-    run_id_str = os.environ.get("ODOO_ID")
+    # CHANGEMENT ICI : On vérifie les deux noms de variables possibles
+    run_id_str = os.environ.get("ODOO_TEST_RUN_ID") or os.environ.get("ODOO_ID")
     
     if not run_id_str:
-        print(" Erreur : ODOO_ID est introuvable. Le script ne sait pas quel Run mettre à jour.")
+        print(" Erreur : ODOO_ID ou ODOO_TEST_RUN_ID est introuvable dans l'environnement.")
         return
 
-    run_id = int(run_id_str)
+    try:
+        run_id = int(run_id_str)
+    except ValueError:
+        print(f" Erreur : L'ID fourni n'est pas un nombre valide : {run_id_str}")
+        return
+
     build_number = os.environ.get("BUILD_NUMBER", "local")
     
     # Calcul du résultat global
     global_result = "fail" if any(r["status"] == "fail" for r in results) else "pass"
     
-    print(f"DEBUG: Statuts trouvés : {[r['status'] for r in results]}")
-
     print(f" Mise à jour du Test Run ID: {run_id} (Build #{build_number})")
 
-    # 2. Mettre à jour le Test Run existant au lieu d'en créer un nouveau
+    # 1. Mettre à jour le Test Run
     models.execute_kw(
         ODOO_DB, uid, ODOO_PASSWORD,
         'test.run', 'write',
@@ -156,8 +98,7 @@ def send_to_odoo(uid, models, results):
         }]
     )
 
-    # 3. Supprimer les étapes existantes si nécessaire (optionnel) 
-    # pour éviter les doublons si on relance le même build
+    # 2. Nettoyer les anciennes étapes pour ce Run
     existing_steps = models.execute_kw(
         ODOO_DB, uid, ODOO_PASSWORD,
         'test.run.step', 'search',
@@ -166,7 +107,7 @@ def send_to_odoo(uid, models, results):
     if existing_steps:
         models.execute_kw(ODOO_DB, uid, ODOO_PASSWORD, 'test.run.step', 'unlink', [existing_steps])
 
-    # 4. Créer les étapes de résultat
+    # 3. Créer les nouvelles étapes de résultat
     for r in results:
         models.execute_kw(
             ODOO_DB, uid, ODOO_PASSWORD,
@@ -180,12 +121,12 @@ def send_to_odoo(uid, models, results):
             }]
         )
 
-    # 5. Appeler l'action_done de ton modèle TestRun pour fermer le test
+    # 4. Finaliser le Test Run dans Odoo
     try:
         models.execute_kw(ODOO_DB, uid, ODOO_PASSWORD, 'test.run', 'action_done', [[run_id]])
         print(f" Test Run {run_id} passé à l'état Terminé.")
     except Exception as e:
-        print(f" Erreur lors de l'appel à action_done : {e}")
+        print(f" Note : L'appel à action_done a échoué (Peut-être déjà terminé) : {e}")
 
     print(f" Résultat synchronisé : {global_result.upper()}")
 
@@ -199,4 +140,4 @@ if __name__ == "__main__":
         send_to_odoo(uid, models, results)
     except Exception as e:
         print(f" Erreur critique : {e}")
-        exit(1)
+        sys.exit(1)
