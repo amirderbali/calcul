@@ -9,8 +9,8 @@ import sys
 ODOO_URL      = "http://localhost:8069"  
 ODOO_DB       = "test_management"
 ODOO_USER     = "admin@odoo.com"
-# Utilise ton mot de passe en clair ou ta clé API mise à jour
 ODOO_PASSWORD  = "bb8701747e7bd392f150ae4118d4ca33780ecac6"
+
 # ============================================================
 # CONNEXION ODOO
 # ============================================================
@@ -18,7 +18,6 @@ def connect_odoo():
     print(f" Tentative de connexion à {ODOO_URL}...")
     try:
         common = xmlrpc.client.ServerProxy(f"{ODOO_URL}/xmlrpc/2/common")
-        
         uid = common.authenticate(ODOO_DB, ODOO_USER, ODOO_PASSWORD, {})
         
         if not uid:
@@ -65,10 +64,9 @@ def parse_junit_xml(xml_file="results.xml"):
     return results
 
 # ============================================================
-# ENVOYER LES RÉSULTATS (VERSION DYNAMIQUE)
+# ENVOYER LES RÉSULTATS (VERSION DYNAMIQUE AVEC AUTO-RESOLVE)
 # ============================================================
 def send_to_odoo(uid, models, results):
-    # CHANGEMENT ICI : On vérifie les deux noms de variables possibles
     run_id_str = os.environ.get("ODOO_TEST_RUN_ID") or os.environ.get("ODOO_ID")
     
     if not run_id_str:
@@ -82,13 +80,11 @@ def send_to_odoo(uid, models, results):
         return
 
     build_number = os.environ.get("BUILD_NUMBER", "local")
-    
-    # Calcul du résultat global
     global_result = "fail" if any(r["status"] == "fail" for r in results) else "pass"
     
     print(f" Mise à jour du Test Run ID: {run_id} (Build #{build_number})")
 
-    # 1. Mettre à jour le Test Run
+    # 1. Mettre à jour le Test Run (Entête)
     models.execute_kw(
         ODOO_DB, uid, ODOO_PASSWORD,
         'test.run', 'write',
@@ -107,8 +103,9 @@ def send_to_odoo(uid, models, results):
     if existing_steps:
         models.execute_kw(ODOO_DB, uid, ODOO_PASSWORD, 'test.run.step', 'unlink', [existing_steps])
 
-    # 3. Créer les nouvelles étapes de résultat
+    # 3. Créer les nouvelles étapes et résoudre les bugs si succès
     for r in results:
+        # Création de l'étape de test
         models.execute_kw(
             ODOO_DB, uid, ODOO_PASSWORD,
             'test.run.step', 'create',
@@ -121,12 +118,25 @@ def send_to_odoo(uid, models, results):
             }]
         )
 
+        # LOGIQUE AUTO-RESOLVE : Si l'étape est un succès, on ferme le bug associé
+        if r["status"] == "pass":
+            try:
+                # On appelle la méthode dans test_run.py avec la description de l'étape
+                models.execute_kw(
+                    ODOO_DB, uid, ODOO_PASSWORD,
+                    'test.run', 'action_auto_resolve_bugs',
+                    [run_id], {'step_description': r['name']}
+                )
+                print(f" --- Vérification de résolution pour : {r['name']}")
+            except Exception as e:
+                print(f" --- Erreur lors de l'auto-resolution pour {r['name']} : {e}")
+
     # 4. Finaliser le Test Run dans Odoo
     try:
         models.execute_kw(ODOO_DB, uid, ODOO_PASSWORD, 'test.run', 'action_done', [[run_id]])
         print(f" Test Run {run_id} passé à l'état Terminé.")
     except Exception as e:
-        print(f" Note : L'appel à action_done a échoué (Peut-être déjà terminé) : {e}")
+        print(f" Note : L'appel à action_done a échoué : {e}")
 
     print(f" Résultat synchronisé : {global_result.upper()}")
 
