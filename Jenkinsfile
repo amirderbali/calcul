@@ -5,14 +5,13 @@ pipeline {
         string(name: 'ODOO_TEST_RUN_ID', defaultValue: '', description: 'ID du Test Run envoyé par Odoo')
     }
 
-    stages {
-        stage('Install Dependencies') {
-            steps {
-                // Ajout de --no-input pour éviter le blocage sur Windows
-                bat 'python -m pip install --upgrade pip --no-input'
-                bat 'python -m pip install --no-cache-dir --progress-bar off --no-input -r requirements.txt'
-            }
-        }
+    stage('Install Dependencies') {
+      steps {
+        bat 'python --version'
+        bat 'python -m pip --version'
+        bat 'python -m pip install --no-cache-dir --progress-bar off -r requirements.txt'
+    }
+}
         
         stage('Run Tests') {
             steps {
