@@ -32,7 +32,7 @@ pipeline {
             }
             echo "Envoi des résultats vers Odoo pour le Run ID: ${params.ODOO_TEST_RUN_ID}"
             
-            withEnv(["ODOO_TEST_RUN_ID=${params.ODOO_TEST_RUN_ID}"]) {
+            withEnv(["ODOO_ID=${params.ODOO_TEST_RUN_ID}"]) {
                 bat 'python send_results.py'
             }
         }
