@@ -10,7 +10,7 @@ ODOO_URL      = "http://localhost:8069"
 ODOO_DB       = "test_management"
 ODOO_USER     = "admin@odoo.com"
 # Utilise ton mot de passe en clair ou ta clé API mise à jour
-ODOO_PASSWORD  = "aa51e3538f835e63b63141961ac557ab860be4d0"
+ODOO_PASSWORD  = "bb8701747e7bd392f150ae4118d4ca33780ecac6"
 # ============================================================
 # CONNEXION ODOO
 # ============================================================
