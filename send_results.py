@@ -9,7 +9,7 @@ import sys
 ODOO_URL      = "http://localhost:8069"  
 ODOO_DB       = "test_management"
 ODOO_USER     = "admin@odoo.com"
-ODOO_PASSWORD  = "bb8701747e7bd392f150ae4118d4ca33780ecac6"
+ODOO_PASSWORD  = "a299a3d73bd6369bbf3da376b4b322bc7694ce7c"
 
 # ============================================================
 # CONNEXION ODOO
