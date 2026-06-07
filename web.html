@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculatrice Web - QA Automated Testing</title>
+    <style>
+        /* Styles Globaux */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        /* Conteneur Principal de la Calculatrice */
+        .calculator-card {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            width: 340px;
+            box-sizing: border-box;
+        }
+
+        h3 {
+            margin-top: 0;
+            color: #1e293b;
+            text-align: center;
+            font-size: 22px;
+            font-weight: 600;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        /* Groupes de champs de saisie */
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 16px;
+            color: #334155;
+            background-color: #f8fafc;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        /* Conteneur des boutons d'opérations */
+        .button-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        #bouton_addition {
+            background-color: #10b981; /* Vert émeraude */
+        }
+
+        #bouton_addition:hover {
+            background-color: #059669;
+        }
+
+        #bouton_soustraction {
+            background-color: #ef4444; /* Rouge moderne */
+        }
+
+        #bouton_soustraction:hover {
+            background-color: #dc2626;
+        }
+
+        /* Zone d'affichage du résultat */
+        .result-box {
+            background-color: #f1f5f9;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            border-radius: 0 6px 6px 0;
+            text-align: center;
+            font-size: 16px;
+            color: #1e293b;
+        }
+
+        #valeur_resultat {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2563eb;
+            display: block;
+            margin-top: 5px;
+        }
+        
+        .error-text {
+            color: #dc2626 !important;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator-card">
+    <h3>Calculatrice App</h3>
+    
+    <div class="input-group">
+        <label for="input_a">Nombre A</label>
+        <input type="number" id="input_a" placeholder="Ex: 10">
+    </div>
+
+    <div class="input-group">
+        <label for="input_b">Nombre B</label>
+        <input type="number" id="input_b" placeholder="Ex: 5">
+    </div>
+
+    <div class="button-grid">
+        <button id="bouton_addition" onclick="calculer('addition')">Addition (+)</button>
+        <button id="bouton_soustraction" onclick="calculer('soustraction')">Soustraction (-)</button>
+    </div>
+
+    <div class="result-box" id="zone_resultat">
+        <span>Résultat de l'opération</span>
+        <span id="valeur_resultat">-</span>
+    </div>
+</div>
+
+<script>
+    function calculer(operation) {
+        const inputA = document.getElementById('input_a');
+        const inputB = document.getElementById('input_b');
+        const displayResult = document.getElementById('valeur_resultat');
+
+        const a = parseFloat(inputA.value);
+        const b = parseFloat(inputB.value);
+        let res = 0;
+
+        // Validation visuelle basique
+        if (isNaN(a) || isNaN(b)) {
+            displayResult.className = "error-text";
+            displayResult.innerText = "Saisie manquante !";
+            return;
+        }
+
+        displayResult.className = ""; // Reset classe erreur si présent
+
+        // Exécution de l'algorithme correspondant
+        if (operation === 'addition') {
+            res = a + b;
+        } else if (operation === 'soustraction') {
+            res = a - b;
+        }
+
+        // Injection du résultat dans le DOM (Ce que Selenium va extraire)
+        displayResult.innerText = res;
+    }
+</script>
+
+</body>
+</html>
