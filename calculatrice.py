@@ -7,6 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.core.os_manager import ChromeType
 
 # ==========================================
 # 1. VOS TESTS UNITAIRES (Back-End)
@@ -44,10 +45,7 @@ class TestCalculatorUI(unittest.TestCase):
             chrome_options.add_experimental_option("detach", True)
 
         # Téléchargement automatique et lancement du driver Chrome
-        self.driver = webdriver.Chrome(
-            service=Service(ChromeDriverManager().install()), 
-            options=chrome_options
-        )
+        self.driver = webdriver.Chrome(options=chrome_options)
         
         # --- CORRECTION DE LA SYNTAXE POUR PYTHON 3.10 ---
         current_dir = os.path.dirname(os.path.abspath(__file__))
