@@ -17,7 +17,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    bat 'pytest calculatrice.py --junitxml=results.xml -v'
+                    bat "pytest calculatrice.py::${params.TEST_FUNC} --junitxml=results.xml -v"
                 }
             }
         }
