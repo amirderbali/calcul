@@ -3,6 +3,7 @@ pipeline {
     
     parameters {
         string(name: 'ODOO_TEST_RUN_ID', defaultValue: '', description: 'ID du Test Run envoyé par Odoo')
+        string(name: 'TEST_FUNC', defaultValue: '', description: 'Fonction  à exécuter')
     }
 
     stages {
