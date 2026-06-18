@@ -18,7 +18,7 @@ class TestCalculator(unittest.TestCase):
         self.assertEqual(addition(2, 3), 5)
 
     def test_soustraction(self):
-        self.assertEqual(soustraction(5, 3), 2)
+        self.assertEqual(soustraction(5, 3), 1)
 
     def test_multiplication(self):
         self.assertEqual(multiplication(2, 4), 8)
@@ -53,6 +53,7 @@ class TestCalculatorUI(unittest.TestCase):
         chemin_normalise = chemin_complet.replace('\\', '/') # On fait le replace ici, en dehors de la f-string
         
         self.base_url = f"file:///{chemin_normalise}"
+        
     def test_selenium_addition_ui(self):
         driver = self.driver
         driver.get(self.base_url)
