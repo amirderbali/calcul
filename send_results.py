@@ -3,10 +3,11 @@ import xml.etree.ElementTree as ET
 import os
 import sys
 
-ODOO_URL      = "http://localhost:8069"  
+ODOO_URL      = "http://localhost:8069"
 ODOO_DB       = "test_management"
 ODOO_USER     = "admin@odoo.com"
-ODOO_PASSWORD  = "a299a3d73bd6369bbf3da376b4b322bc7694ce7c"
+ODOO_PASSWORD = "a299a3d73bd6369bbf3da376b4b322bc7694ce7c"
+
 
 def connect_odoo():
     print(f" Tentative de connexion à {ODOO_URL}...")
@@ -22,6 +23,24 @@ def connect_odoo():
         print(f" Erreur lors de la connexion : {str(e)}")
         raise
 
+
+def _extract_description_and_steps(system_out_text):
+    """
+    A partir du <system-out> capturé par pytest :
+      - la ligne 'DESCRIPTION::...' devient la description lisible de l'étape
+      - les lignes 'Étape N : ...' deviennent les détails (résultat réel)
+    """
+    title = ""
+    steps = []
+    for line in (system_out_text or "").splitlines():
+        s = line.strip()
+        if s.startswith("DESCRIPTION::"):
+            title = s.split("DESCRIPTION::", 1)[1].strip()
+        elif s.startswith("Étape") or s.startswith("Etape"):
+            steps.append(s)
+    return title, "\n".join(steps)
+
+
 def parse_junit_xml(xml_file="results.xml"):
     if not os.path.exists(xml_file):
         raise FileNotFoundError(f"Le fichier {xml_file} est introuvable !")
@@ -30,7 +49,20 @@ def parse_junit_xml(xml_file="results.xml"):
     results = []
     for testcase in root.iter('testcase'):
         name = testcase.attrib.get("name", "unknown")
-        result = {"name": name, "status": "pass", "message": ""}
+
+        # Détails capturés dans la sortie standard du test
+        sysout = testcase.find('system-out')
+        sysout_text = sysout.text if sysout is not None else ""
+        title, steps_detail = _extract_description_and_steps(sysout_text)
+
+        result = {
+            "name": name,                       # clé technique (pour retrouver l'étape)
+            "description": title or name,       # description lisible affichée dans Odoo
+            "detail": steps_detail,             # les étapes détaillées
+            "status": "pass",
+            "message": "",
+        }
+
         failure = testcase.find('failure')
         error   = testcase.find('error')
         if failure is not None or error is not None:
@@ -38,8 +70,22 @@ def parse_junit_xml(xml_file="results.xml"):
             result["status"] = "fail"
             msg = element.attrib.get('message') or element.text or "Assertion Error"
             result["message"] = msg.split('\n')[0]
+
         results.append(result)
     return results
+
+
+def _build_actual_result(r):
+    """Construit le texte du 'Résultat réel' = détails du test + éventuelle erreur."""
+    parties = []
+    if r["detail"]:
+        parties.append(r["detail"])
+    if r["status"] == "pass":
+        parties.append("==> Résultat : OK")
+    else:
+        parties.append(f"==> ÉCHEC : {r['message']}")
+    return "\n".join(parties) if parties else ("OK" if r["status"] == "pass" else "")
+
 
 def send_to_odoo(uid, models, results):
     run_id_str = os.environ.get("ODOO_TEST_RUN_ID") or os.environ.get("ODOO_ID")
@@ -78,26 +124,31 @@ def send_to_odoo(uid, models, results):
 
     # 3. Mettre à jour OU créer les étapes
     for r in results:
-        if r['name'] in step_map:
-            # Étape existante → mise à jour du résultat
+        actual = _build_actual_result(r)
+
+        # On retrouve l'étape par son nom technique OU par sa description lisible
+        # (robuste si le script est relancé sur le même Test Run)
+        step_id = step_map.get(r['name']) or step_map.get(r['description'])
+
+        if step_id:
             models.execute_kw(
                 ODOO_DB, uid, ODOO_PASSWORD,
                 'test.run.step', 'write',
-                [[step_map[r['name']]], {
-                    'actual_result': r["message"] if r["message"] else "OK",
-                    'state': r["status"],
+                [[step_id], {
+                    'description':   r['description'],   # description lisible
+                    'actual_result': actual,             # détails des étapes
+                    'state':         r["status"],
                 }]
             )
         else:
-            # Étape nouvelle → création
             models.execute_kw(
                 ODOO_DB, uid, ODOO_PASSWORD,
                 'test.run.step', 'create',
                 [{
                     'test_run_id':     run_id,
-                    'description':     r['name'],
+                    'description':     r['description'],
                     'expected_result': "Success",
-                    'actual_result':   r["message"] if r["message"] else "OK",
+                    'actual_result':   actual,
                     'state':           r["status"],
                 }]
             )
@@ -122,6 +173,7 @@ def send_to_odoo(uid, models, results):
         print(f" Note : action_done échoué : {e}")
 
     print(f" Résultat synchronisé : {global_result.upper()}")
+
 
 if __name__ == "__main__":
     try:
