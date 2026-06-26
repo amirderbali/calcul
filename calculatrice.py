@@ -18,7 +18,7 @@ class TestCalculator(unittest.TestCase):
         self.assertEqual(addition(2, 3), 5)
 
     def test_soustraction(self):
-        self.assertEqual(soustraction(5, 3), 0)
+        self.assertEqual(soustraction(5, 3), 2)
 
     def test_multiplication(self):
         self.assertEqual(multiplication(2, 4), 8)
@@ -55,23 +55,31 @@ class TestCalculatorUI(unittest.TestCase):
         self.base_url = f"file:///{chemin_normalise}"
         
     def test_selenium_addition_ui(self):
-        driver = self.driver
-        driver.get(self.base_url)
-        
-        # Saisie des valeurs dans les champs de votre interface CSS
-        driver.find_element(By.ID, "input_a").send_keys("15")
-        driver.find_element(By.ID, "input_b").send_keys("5")
-        
-        # Clic sur le bouton d'addition (Vert)
-        driver.find_element(By.ID, "bouton_addition").click()
-        
-        # Pause visuelle uniquement sur votre PC pour avoir le temps d'observer
-        if not self.is_jenkins:
-            time.sleep(4)
-        
-        # Récupération et vérification du résultat affiché à l'écran
-        resultat_affiche = driver.find_element(By.ID, "valeur_resultat").text
-        self.assertEqual(resultat_affiche, "20")
+     driver = self.driver
+     print("\n===== Début du test : Vérification de l'opération d'addition =====")
+ 
+     driver.get(self.base_url)
+     print("✓ Étape 1 : Ouvrir la calculatrice.")
+
+     driver.find_element(By.ID, "input_a").send_keys("15")
+     print("✓ Étape 2 : Saisir le premier nombre : 15.")
+
+     driver.find_element(By.ID, "input_b").send_keys("5")
+     print("✓ Étape 3 : Saisir le deuxième nombre : 5.")
+ 
+     driver.find_element(By.ID, "bouton_addition").click()
+     print("✓ Étape 4 : Cliquer sur le bouton '+'.")
+
+     if not self.is_jenkins:
+        time.sleep(4)
+
+     resultat_affiche = driver.find_element(By.ID, "valeur_resultat").text
+     print(f"✓ Étape 5 : Résultat affiché : {resultat_affiche}")
+
+     self.assertEqual(resultat_affiche, "20")
+
+     print("✓ Résultat attendu : 20")
+     print("✓ Cas de test réussi.\n")
 
     def test_selenium_soustraction_ui(self):
         driver = self.driver
